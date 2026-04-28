@@ -25,6 +25,53 @@
         <div class="meter"><span id="daily-meter"></span></div>
       </section>
 
+      <section class="insights-grid">
+        <article class="insight-panel">
+          <div class="panel-head">
+            <div>
+              <h2>鍛錬ログ</h2>
+              <p>直近30日</p>
+            </div>
+            <strong id="month-total">0回</strong>
+          </div>
+          <div class="heatmap-wrap">
+            <div class="heat-weekdays" aria-hidden="true">
+              <span></span>
+              <span>月</span>
+              <span></span>
+              <span>水</span>
+              <span></span>
+              <span>金</span>
+              <span></span>
+            </div>
+            <div class="heatmap" id="heatmap" aria-label="直近30日の鍛錬回数"></div>
+          </div>
+          <div class="heatmap-legend">
+            <span>少</span>
+            <i class="level-0"></i>
+            <i class="level-1"></i>
+            <i class="level-2"></i>
+            <i class="level-3"></i>
+            <i class="level-4"></i>
+            <span>多</span>
+          </div>
+        </article>
+
+        <article class="insight-panel ability-panel">
+          <div class="panel-head">
+            <div>
+              <h2>対話能力</h2>
+              <p id="ability-summary">鍛錬すると更新されます</p>
+            </div>
+            <strong id="ability-average">--</strong>
+          </div>
+          <div class="radar-wrap">
+            <svg id="ability-radar" viewBox="0 0 260 230" role="img" aria-label="対話能力レーダー"></svg>
+          </div>
+          <div class="ability-list" id="ability-list"></div>
+        </article>
+      </section>
+
       <h2 class="section-title">Training</h2>
       <section class="mode-grid">
         <button class="mode-card" data-mode="socratic">
