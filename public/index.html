@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Codex思考道場</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app">
+    <section id="screen-home" class="screen active">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Local Codex Coach</p>
+          <h1>Codex思考道場</h1>
+        </div>
+        <div class="streak" id="streak">0日</div>
+      </header>
+
+      <section class="daily">
+        <div class="daily-head">
+          <span>今日の鍛錬</span>
+          <strong id="daily-label">0 / 100 pt</strong>
+        </div>
+        <div class="meter"><span id="daily-meter"></span></div>
+      </section>
+
+      <h2 class="section-title">Training</h2>
+      <section class="mode-grid">
+        <button class="mode-card" data-mode="socratic">
+          <span>対話</span>
+          <small>問いを重ねて考えを掘る</small>
+        </button>
+        <button class="mode-card" data-mode="counter">
+          <span>反論</span>
+          <small>主張の弱点を鍛える</small>
+        </button>
+        <button class="mode-card" data-mode="decision">
+          <span>意思決定</span>
+          <small>選択肢と基準を整理する</small>
+        </button>
+        <button class="mode-card" data-mode="output">
+          <span>アウトプット</span>
+          <small>要約・説明を採点する</small>
+        </button>
+        <button class="mode-card wide" data-mode="news">
+          <span>ニュース分析</span>
+          <small>貼ったニュースを構造化してクイズ化</small>
+        </button>
+      </section>
+
+      <h2 class="section-title">Recent</h2>
+      <section class="history" id="history"></section>
+    </section>
+
+    <section id="screen-chat" class="screen">
+      <header class="chatbar">
+        <button id="back-btn" class="ghost">戻る</button>
+        <div>
+          <h1 id="chat-title">対話</h1>
+          <p id="chat-sub">Codexが返答します</p>
+        </div>
+        <button id="role-btn" class="ghost hidden">守</button>
+      </header>
+      <div class="messages" id="messages"></div>
+      <form class="composer" id="composer">
+        <textarea id="input" rows="1" placeholder="入力してください..."></textarea>
+        <button id="send" type="submit">送信</button>
+      </form>
+    </section>
+
+    <section id="screen-profile" class="screen">
+      <header class="topbar compact">
+        <div>
+          <p class="eyebrow">Settings</p>
+          <h1>プロフィール</h1>
+        </div>
+      </header>
+      <form class="settings" id="profile-form">
+        <label>名前<input id="profile-name" autocomplete="name"></label>
+        <label>職業<input id="profile-job"></label>
+        <label>よく考えたいテーマ<textarea id="profile-worries" rows="4"></textarea></label>
+        <label>コーチスタイル
+          <select id="profile-style">
+            <option value="gentle">穏やか</option>
+            <option value="sharp">鋭め</option>
+            <option value="socratic">問い中心</option>
+            <option value="zen">禅っぽく短く</option>
+          </select>
+        </label>
+        <button type="submit">保存</button>
+      </form>
+    </section>
+  </main>
+
+  <nav class="nav">
+    <button data-screen="home" class="active">Home</button>
+    <button data-screen="profile">Profile</button>
+  </nav>
+
+  <div id="toast" class="toast"></div>
+  <script src="./app.js" type="module"></script>
+</body>
+</html>

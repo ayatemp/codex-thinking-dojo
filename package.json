@@ -1,0 +1,14 @@
+{
+  "name": "codex-thinking-dojo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A local thinking-training app that uses Codex CLI instead of an API key or Ollama.",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
