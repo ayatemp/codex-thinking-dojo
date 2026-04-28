@@ -10,7 +10,7 @@ const publicDir = join(root, 'public');
 const port = Number(process.env.PORT || 8787);
 const host = process.env.HOST || '127.0.0.1';
 const codexBin = process.env.CODEX_BIN || 'codex';
-const codexModel = process.env.CODEX_MODEL || '';
+const codexModel = process.env.CODEX_MODEL || 'gpt-5.2';
 const codexTimeoutMs = Number(process.env.CODEX_TIMEOUT_MS || 180000);
 let codexExecHelpPromise;
 
@@ -256,7 +256,7 @@ async function handleApi(req, res) {
     return json(res, 200, {
       ok: true,
       codexBin,
-      model: codexModel || '(Codex CLI default)',
+      model: codexModel,
       mock: process.env.CODEX_MOCK === '1',
       supportedOptions,
     });
@@ -307,5 +307,5 @@ createServer(async (req, res) => {
 }).listen(port, host, () => {
   console.log(`Codex Thinking Dojo: http://${host}:${port}`);
   console.log(`Codex binary: ${codexBin}`);
-  console.log(`Model: ${codexModel || '(Codex CLI default)'}`);
+  console.log(`Model: ${codexModel}`);
 });

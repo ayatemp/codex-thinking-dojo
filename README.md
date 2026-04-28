@@ -36,15 +36,14 @@ npm start
 http://localhost:8787
 ```
 
-## 軽いモデルを指定したい場合
+## 利用モデル
 
-Codex CLI側で使えるモデル名を環境変数で指定できます。
+デフォルトでは `gpt-5.2` を使います。  
+Codex CLI側で使える別のモデル名を環境変数で指定すると上書きできます。
 
 ```bash
 CODEX_MODEL=gpt-5.4-mini npm start
 ```
-
-指定しない場合はCodex CLIのデフォルト設定を使います。
 
 ## 動作確認だけしたい場合
 
