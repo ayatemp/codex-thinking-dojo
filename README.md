@@ -1,5 +1,7 @@
 # Codex思考道場
 
+![Codex Thinking Dojo banner](assets/banner.svg)
+
 Ollamaではなく、ローカルの **Codex CLI** に会話生成を任せる思考トレーニングアプリです。OpenAI APIキーは使いません。
 
 ## できること
