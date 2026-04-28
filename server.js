@@ -10,7 +10,11 @@ const publicDir = join(root, 'public');
 const port = Number(process.env.PORT || 8787);
 const host = process.env.HOST || '127.0.0.1';
 const codexBin = process.env.CODEX_BIN || 'codex';
-const codexModel = process.env.CODEX_MODEL || 'gpt-5.2';
+const codexModel = process.env.CODEX_MODEL || 'gpt-5.4-mini';
+const codexReasoningEffort = process.env.CODEX_REASONING_EFFORT || 'low';
+const codexVerbosity = process.env.CODEX_VERBOSITY || 'low';
+const maxHistoryMessages = Number(process.env.CODEX_MAX_HISTORY_MESSAGES || 6);
+const maxMessageChars = Number(process.env.CODEX_MAX_MESSAGE_CHARS || 800);
 const codexTimeoutMs = Number(process.env.CODEX_TIMEOUT_MS || 180000);
 let codexExecHelpPromise;
 
@@ -107,7 +111,7 @@ function buildPrompt(payload) {
     : payload.mode;
   const mode = modes[modeKey] || modes.socratic;
   const profile = payload.profile || {};
-  const messages = Array.isArray(payload.messages) ? payload.messages.slice(-12) : [];
+  const messages = Array.isArray(payload.messages) ? payload.messages.slice(-maxHistoryMessages) : [];
   const style = styleGuide[profile.style] || styleGuide.gentle;
   const profileLines = [
     profile.name ? `名前: ${profile.name}` : '',
@@ -117,24 +121,19 @@ function buildPrompt(payload) {
 
   const transcript = messages.map(m => {
     const role = m.role === 'assistant' ? 'コーチ' : 'ユーザー';
-    return `${role}: ${String(m.content || '').slice(0, 4000)}`;
+    return `${role}: ${String(m.content || '').slice(0, maxMessageChars)}`;
   }).join('\n\n');
 
   return [
-    'あなたはWebアプリ「Codex思考道場」の会話エンジンです。',
-    'コード編集、ファイル操作、ツール実行は一切しません。会話の返答だけを作ってください。',
-    '最終出力には、ユーザーに表示する日本語の返答本文だけを書いてください。',
-    'Markdownは使ってよいですが、見出しは必要なときだけにしてください。',
-    '返答は原則300字以内。ニュース分析や採点では必要に応じて500字まで可。',
-    '',
+    'Webアプリ「Codex思考道場」の会話エンジンです。',
+    'ツール実行やコード編集は不要。表示する日本語の返答本文だけを出力。',
+    '原則180字以内。採点やニュース分析でも300字以内。',
     `【モード】${mode.title}`,
     mode.instruction,
-    '',
     `【コーチスタイル】${style}`,
     profileLines ? `\n【ユーザープロフィール】\n${profileLines}` : '',
-    transcript ? `\n【ここまでの会話】\n${transcript}` : '',
-    '',
-    '上の会話の続きとして、次のコーチ返答だけを出力してください。',
+    transcript ? `\n【会話】\n${transcript}` : '',
+    '次のコーチ返答だけを出力。',
   ].filter(Boolean).join('\n');
 }
 
@@ -196,12 +195,15 @@ function buildCodexArgs(help, outFile) {
   pushFlag(args, help, '--skip-git-repo-check');
   pushFlag(args, help, '--ephemeral');
   pushFlag(args, help, '--ignore-rules');
+  pushFlag(args, help, '--ignore-user-config');
   pushOption(args, help, '--sandbox', 'read-only');
   pushOption(args, help, '--ask-for-approval', 'never');
   pushOption(args, help, '--color', 'never');
   pushOption(args, help, '--output-last-message', outFile);
 
   if (codexModel) args.push('-m', codexModel);
+  args.push('-c', `model_reasoning_effort="${codexReasoningEffort}"`);
+  args.push('-c', `model_verbosity="${codexVerbosity}"`);
   if (supportsOption(help, '-C, --cd') || supportsOption(help, '--cd')) args.push('-C', root);
   args.push('-');
 
@@ -246,6 +248,7 @@ async function handleApi(req, res) {
         '--skip-git-repo-check',
         '--ephemeral',
         '--ignore-rules',
+        '--ignore-user-config',
         '--sandbox',
         '--ask-for-approval',
         '--color',
@@ -257,6 +260,10 @@ async function handleApi(req, res) {
       ok: true,
       codexBin,
       model: codexModel,
+      reasoningEffort: codexReasoningEffort,
+      verbosity: codexVerbosity,
+      maxHistoryMessages,
+      maxMessageChars,
       mock: process.env.CODEX_MOCK === '1',
       supportedOptions,
     });
@@ -308,4 +315,6 @@ createServer(async (req, res) => {
   console.log(`Codex Thinking Dojo: http://${host}:${port}`);
   console.log(`Codex binary: ${codexBin}`);
   console.log(`Model: ${codexModel}`);
+  console.log(`Reasoning effort: ${codexReasoningEffort}`);
+  console.log(`Verbosity: ${codexVerbosity}`);
 });

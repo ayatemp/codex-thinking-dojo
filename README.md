@@ -38,11 +38,18 @@ http://localhost:8787
 
 ## 利用モデル
 
-デフォルトでは `gpt-5.2` を使います。  
-Codex CLI側で使える別のモデル名を環境変数で指定すると上書きできます。
+デフォルトではトークン消費を抑えるために、軽量寄りの設定を使います。
+
+- `CODEX_MODEL`: `gpt-5.4-mini`
+- `CODEX_REASONING_EFFORT`: `low`
+- `CODEX_VERBOSITY`: `low`
+- `CODEX_MAX_HISTORY_MESSAGES`: `6`
+- `CODEX_MAX_MESSAGE_CHARS`: `800`
+
+Codex CLI側で使える別の値を環境変数で指定すると上書きできます。
 
 ```bash
-CODEX_MODEL=gpt-5.4-mini npm start
+CODEX_MODEL=gpt-5.2 CODEX_REASONING_EFFORT=medium npm start
 ```
 
 ## 動作確認だけしたい場合
