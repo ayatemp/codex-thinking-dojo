@@ -59,3 +59,18 @@ CODEX_MOCK=1 npm start
 - 1往復ごとに `codex exec` を起動するため、Ollama直叩きより待ち時間は長めです。
 - 会話履歴とプロフィールはブラウザの `localStorage` に保存されます。
 - ニュース本文は自動取得せず、ユーザーが貼った内容をCodexが分析します。
+- Codex CLIのバージョン差に対応するため、サーバーは `codex exec --help` を読んで、対応しているオプションだけを自動で渡します。
+
+## トラブルシュート
+
+### `unexpected argument '--ask-for-approval' found`
+
+古い実装では `codex exec --ask-for-approval never` を固定で渡していました。  
+現在の実装ではCodex CLIがそのオプションに対応している場合だけ渡すため、このエラーは出ない想定です。
+
+修正後も同じエラーが出る場合は、古いサーバープロセスが残っている可能性があります。
+
+```bash
+pkill -f "node server.js"
+npm start
+```

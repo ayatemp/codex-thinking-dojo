@@ -1,6 +1,5 @@
 import { createServer } from 'node:http';
 import { readFile, stat, unlink } from 'node:fs/promises';
-import { createWriteStream } from 'node:fs';
 import { join, resolve, extname } from 'node:path';
 import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
@@ -13,6 +12,7 @@ const host = process.env.HOST || '127.0.0.1';
 const codexBin = process.env.CODEX_BIN || 'codex';
 const codexModel = process.env.CODEX_MODEL || '';
 const codexTimeoutMs = Number(process.env.CODEX_TIMEOUT_MS || 180000);
+let codexExecHelpPromise;
 
 const mime = {
   '.html': 'text/html; charset=utf-8',
@@ -138,38 +138,22 @@ function buildPrompt(payload) {
   ].filter(Boolean).join('\n');
 }
 
-async function runCodex(prompt) {
-  if (process.env.CODEX_MOCK === '1') {
-    return 'CODEX_MOCK=1 のため、ここでは仮の返答です。あなたの考えの前提を1つだけ疑うなら、どこから見直しますか？';
-  }
-
-  const outFile = join(tmpdir(), `codex-thinking-dojo-${randomUUID()}.txt`);
-  const args = [
-    'exec',
-    '--skip-git-repo-check',
-    '--ephemeral',
-    '--ignore-rules',
-    '--sandbox', 'read-only',
-    '--ask-for-approval', 'never',
-    '--color', 'never',
-    '--output-last-message', outFile,
-  ];
-  if (codexModel) args.push('-m', codexModel);
-  args.push('-C', root, '-');
-
-  await new Promise((resolveRun, reject) => {
-    const child = spawn(codexBin, args, {
-      cwd: root,
-      stdio: ['pipe', 'pipe', 'pipe'],
-      env: { ...process.env, NO_COLOR: '1' },
+function runCommand(command, args, options = {}) {
+  return new Promise((resolveRun, reject) => {
+    const child = spawn(command, args, {
+      cwd: options.cwd || root,
+      stdio: options.input ? ['pipe', 'pipe', 'pipe'] : ['ignore', 'pipe', 'pipe'],
+      env: { ...process.env, NO_COLOR: '1', ...(options.env || {}) },
     });
 
+    let stdout = '';
     let stderr = '';
     const timer = setTimeout(() => {
       child.kill('SIGTERM');
-      reject(new Error(`Codex timed out after ${Math.round(codexTimeoutMs / 1000)}s`));
-    }, codexTimeoutMs);
+      reject(new Error(`${command} timed out after ${Math.round((options.timeoutMs || codexTimeoutMs) / 1000)}s`));
+    }, options.timeoutMs || codexTimeoutMs);
 
+    child.stdout.on('data', chunk => { stdout += chunk.toString(); });
     child.stderr.on('data', chunk => { stderr += chunk.toString(); });
     child.on('error', err => {
       clearTimeout(timer);
@@ -177,14 +161,76 @@ async function runCodex(prompt) {
     });
     child.on('close', code => {
       clearTimeout(timer);
-      if (code === 0) resolveRun();
-      else reject(new Error(stderr.trim() || `Codex exited with code ${code}`));
+      resolveRun({ code, stdout, stderr });
     });
-    child.stdin.end(prompt);
+    if (options.input) child.stdin.end(options.input);
+  });
+}
+
+async function getCodexExecHelp() {
+  if (!codexExecHelpPromise) {
+    codexExecHelpPromise = runCommand(codexBin, ['exec', '--help'], { timeoutMs: 15000 })
+      .then(({ code, stdout, stderr }) => {
+        if (code !== 0) throw new Error(stderr.trim() || 'Could not read codex exec --help');
+        return `${stdout}\n${stderr}`;
+      });
+  }
+  return codexExecHelpPromise;
+}
+
+function supportsOption(help, option) {
+  return help.includes(option);
+}
+
+function pushFlag(args, help, flag) {
+  if (supportsOption(help, flag)) args.push(flag);
+}
+
+function pushOption(args, help, flag, value) {
+  if (supportsOption(help, flag)) args.push(flag, value);
+}
+
+function buildCodexArgs(help, outFile) {
+  const args = ['exec'];
+
+  pushFlag(args, help, '--skip-git-repo-check');
+  pushFlag(args, help, '--ephemeral');
+  pushFlag(args, help, '--ignore-rules');
+  pushOption(args, help, '--sandbox', 'read-only');
+  pushOption(args, help, '--ask-for-approval', 'never');
+  pushOption(args, help, '--color', 'never');
+  pushOption(args, help, '--output-last-message', outFile);
+
+  if (codexModel) args.push('-m', codexModel);
+  if (supportsOption(help, '-C, --cd') || supportsOption(help, '--cd')) args.push('-C', root);
+  args.push('-');
+
+  return args;
+}
+
+async function runCodex(prompt) {
+  if (process.env.CODEX_MOCK === '1') {
+    return 'CODEX_MOCK=1 のため、ここでは仮の返答です。あなたの考えの前提を1つだけ疑うなら、どこから見直しますか？';
+  }
+
+  const help = await getCodexExecHelp();
+  const outFile = join(tmpdir(), `codex-thinking-dojo-${randomUUID()}.txt`);
+  const args = buildCodexArgs(help, outFile);
+  const { code, stdout, stderr } = await runCommand(codexBin, args, {
+    cwd: root,
+    input: prompt,
+    timeoutMs: codexTimeoutMs,
   });
 
+  if (code !== 0) {
+    const details = stderr.trim() || stdout.trim() || `Codex exited with code ${code}`;
+    throw new Error(details);
+  }
+
   try {
-    const text = (await readFile(outFile, 'utf8')).trim();
+    const text = supportsOption(help, '--output-last-message')
+      ? (await readFile(outFile, 'utf8')).trim()
+      : stdout.trim();
     return text || '返答が空でした。もう一度送ってください。';
   } finally {
     unlink(outFile).catch(() => {});
@@ -193,11 +239,26 @@ async function runCodex(prompt) {
 
 async function handleApi(req, res) {
   if (req.method === 'GET' && req.url === '/api/health') {
+    let supportedOptions = [];
+    try {
+      const help = await getCodexExecHelp();
+      supportedOptions = [
+        '--skip-git-repo-check',
+        '--ephemeral',
+        '--ignore-rules',
+        '--sandbox',
+        '--ask-for-approval',
+        '--color',
+        '--output-last-message',
+        '--cd',
+      ].filter(option => supportsOption(help, option));
+    } catch {}
     return json(res, 200, {
       ok: true,
       codexBin,
       model: codexModel || '(Codex CLI default)',
       mock: process.env.CODEX_MOCK === '1',
+      supportedOptions,
     });
   }
 
